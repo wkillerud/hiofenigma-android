@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+        >
+
+    <EditText android:id="@+id/input"
+              android:inputType="numberDecimal"
+              android:layout_height="wrap_content"
+              android:textSize="30sp"
+              android:text="0"
+              android:layout_width="match_parent" />
+
+    <LinearLayout android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+            android:orientation="horizontal">
+
+    <Spinner android:id="@+id/operator"
+             android:layout_width="wrap_content"
+             android:layout_weight="1"
+             android:layout_height="match_parent" />
+    <Button android:id="@+id/calculate"
+            android:layout_weight="3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/calculate" />
+    </LinearLayout>
+
+    <TextView android:id="@+id/result"
+              android:text="0"
+              android:textSize="25sp"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content" />
+
+
+</LinearLayout>
+

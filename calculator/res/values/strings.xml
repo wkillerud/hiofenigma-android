@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kalkulator</string>
+    <string name="calculate">Calculate</string>
+    <string name="failure">Epic Fail!</string>
+</resources>
