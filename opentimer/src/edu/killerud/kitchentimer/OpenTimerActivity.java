@@ -25,14 +25,10 @@ package edu.killerud.kitchentimer;
 import java.util.ArrayList;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
+import android.content.*;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -57,94 +53,100 @@ import com.quietlycoding.android.picker.NumberPicker;
  */
 public class OpenTimerActivity extends Activity
 {
-	private LinearLayout mLlContentLayout;
-	private LinearLayout mLlTimePicker;
-	private static NumberPicker npHours;
-	private static NumberPicker npMinutes;
-	private static NumberPicker npSeconds;
-	private CountdownService mCDService;
-	protected ServiceConnection mConnection = new ServiceConnection()
+	private LinearLayout contentLayout;
+	private LinearLayout timePicker;
+	private static NumberPicker hoursPicker;
+	private static NumberPicker minutesPicker;
+	private static NumberPicker secondsPicker;
+	private CountdownService countdownService;
+    private ArrayList<TimerView> timerViews;
+    protected ServiceConnection countdownServiceConnection = new ServiceConnection()
 	{
 		public void onServiceConnected(ComponentName className, IBinder service)
 		{
-			mCDService = ((CountdownService.ServiceBinder) service)
+			countdownService = ((CountdownService.ServiceBinder) service)
 					.getService();
-			mCDService.announceServiceState();
+			countdownService.announceServiceState();
 
-			if (mCDService.announceServiceState() != mTimerViews.size())
+			if (countdownService.announceServiceState() != timerViews.size())
 			{
-				for (int i = 0; i < mTimerViews.size(); i++)
+				for (int i = 0; i < timerViews.size(); i++)
 				{
-					mTimerViews.get(i).remove();
+					timerViews.get(i).remove();
 				}
-				for (int i = 0; i < mCDService.announceServiceState(); i++)
+				for (int i = 0; i < countdownService.announceServiceState(); i++)
 				{
 					addTimerView();
 				}
 			}
 
-			/* What we need has now been loaded, and we can start using the app */
-			mLlContentLayout.removeView(findViewById(R.id.tvLoading));
+			contentLayout.removeView(findViewById(R.id.tvLoading));
 		}
 
 		public void onServiceDisconnected(ComponentName className)
 		{
-			// Log.i("OpenTimerActivity",
-			// "Service disconnected. 99.9% likely that all timers were done!");
-			mCDService = null;
+			countdownService = null;
 		}
 	};
 
-	private ArrayList<TimerView> mTimerViews;
 
-	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		/*
-		 * Binds the activity to our service in order to make method calls
-		 * directly on the service, as well as properties.
-		 */
+
 		Intent bindIntent = new Intent(this, CountdownService.class);
-		bindService(bindIntent, mConnection, Context.BIND_IMPORTANT);
+		bindService(bindIntent, countdownServiceConnection, Context.BIND_IMPORTANT);
 
-		/* Sets up the layout */
 		setContentView(R.layout.main);
-		mLlContentLayout = (LinearLayout) findViewById(R.id.llContentLayout);
-		mLlTimePicker = (LinearLayout) findViewById(R.id.llTimePicker);
-		setupTimePickers();
-		mTimerViews = new ArrayList<TimerView>();
+		contentLayout = (LinearLayout) findViewById(R.id.llContentLayout);
+		timePicker = (LinearLayout) findViewById(R.id.llTimePicker);
 
-		/* Sets up the add- and remove timer buttons */
-		Button bAddTimer = (Button) findViewById(R.id.bAddTimer);
-		Button bRemoveTimer = (Button) findViewById(R.id.bRemoveTimer);
-		bAddTimer.setOnClickListener(new OnClickListener()
-		{
-			public void onClick(View v)
-			{
-				addTimer();
-			}
+        setupTimePickers();
+        restoreSavedTimeIfAny();
 
-		});
-		bRemoveTimer.setOnClickListener(new OnClickListener()
-		{
-			public void onClick(View v)
-			{
-				removeTimer();
-			}
-
-		});
+        timerViews = new ArrayList<TimerView>();
+        setupAddRemoveButtons();
 	}
 
-	@Override
+    private void setupAddRemoveButtons()
+    {
+        Button bAddTimer = (Button) findViewById(R.id.bAddTimer);
+        Button bRemoveTimer = (Button) findViewById(R.id.bRemoveTimer);
+        bAddTimer.setOnClickListener(new OnClickListener()
+        {
+            public void onClick(View v)
+            {
+                addTimer();
+            }
+
+        });
+        bRemoveTimer.setOnClickListener(new OnClickListener()
+        {
+            public void onClick(View v)
+            {
+                removeTimer();
+            }
+
+        });
+    }
+
+    private void restoreSavedTimeIfAny()
+    {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        hoursPicker.setCurrent(preferences.getInt("HOURS", 0));
+        minutesPicker.setCurrent(preferences.getInt("MINUTES", 0));
+        secondsPicker.setCurrent(preferences.getInt("SECONDS", 0));
+    }
+
+    @Override
 	public void onResume()
 	{
 		super.onResume();
 		registerBroadcastReceiver();
 
 		Intent bindIntent = new Intent(this, CountdownService.class);
-		bindService(bindIntent, mConnection, Context.BIND_IMPORTANT);
+		bindService(bindIntent, countdownServiceConnection, Context.BIND_IMPORTANT);
 
 		Intent startService = new Intent(this, CountdownService.class);
 		startService(startService);
@@ -155,15 +157,42 @@ public class OpenTimerActivity extends Activity
 	{
 		super.onPause();
 		unregisterReceiver(broadcastReceiver);
-		unbindService(mConnection);
-		/*
-		 * I don't know about you, but when I navigate out of an app with
-		 * nothing happening in it, I'm not comming back!
-		 * 
-		 * Run the following method to do some magic! <|:D~
-		 */
-		appShutdownMagic();
+		unbindService(countdownServiceConnection);
+		shutDownServiceIfNotUsed();
 	}
+
+    @Override
+    public void onSaveInstanceState(Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+        outState.putInt("HOURS", hoursPicker.getCurrent());
+        outState.putInt("MINUTES", minutesPicker.getCurrent());
+        outState.putInt("SECONDS", secondsPicker.getCurrent());
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt("HOURS", hoursPicker.getCurrent());
+        editor.putInt("MINUTES", minutesPicker.getCurrent());
+        editor.putInt("SECONDS", secondsPicker.getCurrent());
+    }
+
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState)
+    {
+        super.onRestoreInstanceState(savedInstanceState);
+        if(savedInstanceState.containsKey("HOURS"))
+        {
+            hoursPicker.setCurrent(savedInstanceState.getInt("HOURS"));
+        }
+        if(savedInstanceState.containsKey("MINUTES"))
+        {
+            minutesPicker.setCurrent(savedInstanceState.getInt("MINUTES"));
+        }
+        if(savedInstanceState.containsKey("SECONDS"))
+        {
+            secondsPicker.setCurrent(savedInstanceState.getInt("SECONDS"));
+        }
+    }
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu)
@@ -179,9 +208,9 @@ public class OpenTimerActivity extends Activity
 		switch (item.getItemId())
 		{
 		case R.id.stopAll:
-			for (int i = 0; i < mCDService.announceServiceState(); i++)
+			for (int i = 0; i < countdownService.announceServiceState(); i++)
 			{
-				mCDService.stopTimer(i);
+				countdownService.stopTimer(i);
 			}
 			return true;
 		default:
@@ -205,57 +234,57 @@ public class OpenTimerActivity extends Activity
 
 	protected void addTimer()
 	{
-		mCDService.addTimer();
+		countdownService.addTimer();
 	}
 
 	protected void addTimerView()
 	{
-		mTimerViews.add(new TimerView(getApplicationContext(), mTimerViews
-				.size(), mCDService));
-		mLlContentLayout.addView(mTimerViews.get(mTimerViews.size() - 1)
-				.getTimerLayout());
+		timerViews.add(new TimerView(getApplicationContext(), timerViews
+                .size(), countdownService));
+		contentLayout.addView(timerViews.get(timerViews.size() - 1)
+                .getTimerLayout());
 	}
 
 	protected void removeTimer()
 	{
-		if (mCDService.announceServiceState() > 0)
+		if (countdownService.announceServiceState() > 0)
 		{
-			mCDService.removeTimer();
+			countdownService.removeTimer();
 		}
 	}
 
 	protected void removeTimerView()
 	{
-		if (mTimerViews.size() > 0)
+		if (timerViews.size() > 0)
 		{
-			mLlContentLayout.removeView(mTimerViews.get(mTimerViews.size() - 1)
-					.getTimerLayout());
-			mTimerViews.remove(mTimerViews.size() - 1);
+			contentLayout.removeView(timerViews.get(timerViews.size() - 1)
+                    .getTimerLayout());
+			timerViews.remove(timerViews.size() - 1);
 		}
 	}
 
 	/* Sets up the TimePicker widgets */
 	protected void setupTimePickers()
 	{
-		npHours = new NumberPicker(getApplicationContext());
-		npMinutes = new NumberPicker(getApplicationContext());
-		npSeconds = new NumberPicker(getApplicationContext());
+		hoursPicker = new NumberPicker(getApplicationContext());
+		minutesPicker = new NumberPicker(getApplicationContext());
+		secondsPicker = new NumberPicker(getApplicationContext());
 
-		npHours.setFormatter(NumberPicker.TWO_DIGIT_FORMATTER);
-		npMinutes.setFormatter(NumberPicker.TWO_DIGIT_FORMATTER);
-		npSeconds.setFormatter(NumberPicker.TWO_DIGIT_FORMATTER);
+		hoursPicker.setFormatter(NumberPicker.TWO_DIGIT_FORMATTER);
+		minutesPicker.setFormatter(NumberPicker.TWO_DIGIT_FORMATTER);
+		secondsPicker.setFormatter(NumberPicker.TWO_DIGIT_FORMATTER);
 
-		npHours.setCurrent(0);
-		npMinutes.setCurrent(1);
-		npSeconds.setCurrent(0);
+		hoursPicker.setCurrent(0);
+		minutesPicker.setCurrent(1);
+		secondsPicker.setCurrent(0);
 
-		npHours.setRange(0, 24);
-		npMinutes.setRange(0, 59);
-		npSeconds.setRange(0, 59);
+		hoursPicker.setRange(0, 24);
+		minutesPicker.setRange(0, 59);
+		secondsPicker.setRange(0, 59);
 
-		mLlTimePicker.addView(npHours);
-		mLlTimePicker.addView(npMinutes);
-		mLlTimePicker.addView(npSeconds);
+		timePicker.addView(hoursPicker);
+		timePicker.addView(minutesPicker);
+		timePicker.addView(secondsPicker);
 	}
 
 	private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver()
@@ -270,23 +299,23 @@ public class OpenTimerActivity extends Activity
 			}
 			if (intent.getAction().equals("TIMER_TICK"))
 			{
-				mTimerViews.get(intent.getIntExtra("TIMER_ID", -1)).updateTick(
+				timerViews.get(intent.getIntExtra("TIMER_ID", -1)).updateTick(
 						intent.getLongExtra("TIME_LEFT", 0l));
 			} else if (intent.getAction().equals("TIMER_REMOVED"))
 			{
 				removeTimerView();
 			} else if (intent.getAction().equals("TIMER_STOPPED"))
 			{
-				mTimerViews.get(intent.getIntExtra("TIMER_ID", -1)).resetUI();
+				timerViews.get(intent.getIntExtra("TIMER_ID", -1)).resetUI();
 
 			} else if (intent.getAction().equals("ALARM_SOUNDING"))
 			{
-				mTimerViews.get(intent.getIntExtra("TIMER_ID", -1))
+				timerViews.get(intent.getIntExtra("TIMER_ID", -1))
 						.setSounding();
 			} else if (intent.getAction().equals("TIMER_ALARM_STOPPED"))
 
 			{
-				mTimerViews.get(intent.getIntExtra("TIMER_ID", -1)).resetUI();
+				timerViews.get(intent.getIntExtra("TIMER_ID", -1)).resetUI();
 			} else if (intent.getAction().equals("TIMER_ADDED"))
 			{
 				addTimerView();
@@ -298,26 +327,26 @@ public class OpenTimerActivity extends Activity
 
 	public static int getHours()
 	{
-		return npHours.getCurrent();
+		return hoursPicker.getCurrent();
 	}
 
 	public static int getMinutes()
 	{
-		return npMinutes.getCurrent();
+		return minutesPicker.getCurrent();
 	}
 
 	public static int getSeconds()
 	{
-		return npSeconds.getCurrent();
+		return secondsPicker.getCurrent();
 	}
 
-	protected void appShutdownMagic()
+	protected void shutDownServiceIfNotUsed()
 	{
-		if (mCDService != null && mConnection != null)
+		if (countdownService != null && countdownServiceConnection != null)
 		{
-			if (mCDService.allAreFinished())
+			if (countdownService.allAreFinished())
 			{
-				mCDService.stopSelf();
+				countdownService.stopSelf();
 			}
 		}
 	}
