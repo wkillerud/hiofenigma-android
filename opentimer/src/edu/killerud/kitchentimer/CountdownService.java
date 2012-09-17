@@ -95,7 +95,7 @@ public class CountdownService extends Service
 		 * notifications.
 		 */
 		int NOTIFICATION_ID = 1;
-		Intent notificationIntent = new Intent(this, CountdownFragment.class);
+		Intent notificationIntent = new Intent(this, OpenTimerActivity.class);
 		notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
 				| Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
@@ -209,7 +209,7 @@ public class CountdownService extends Service
 				R.drawable.icon_notification, getString(R.string.notification),
 				System.currentTimeMillis());
 
-		Intent resumeActivity = new Intent(this, CountdownFragment.class);
+		Intent resumeActivity = new Intent(this, OpenTimerActivity.class);
 
 		/*
 		 * This line lets the user touch the notification to be taken to the
@@ -272,7 +272,7 @@ public class CountdownService extends Service
 			 * like we do in CountdownTimer.onFinish().
 			 */
 			Intent mAlarmIntent = new Intent(getApplicationContext(),
-					CountdownFragment.class);
+					OpenTimerActivity.class);
 			mPendingAlarmIntent = PendingIntent.getBroadcast(
 					getApplicationContext(), 1234, mAlarmIntent, 0);
 			mAlarmManager = (AlarmManager) getApplicationContext()

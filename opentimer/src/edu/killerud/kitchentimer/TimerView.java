@@ -30,7 +30,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class CountdownLayout
+public class TimerView
 {
 	private final LinearLayout mLlTimerLayout;
 
@@ -47,14 +47,14 @@ public class CountdownLayout
 
 	boolean isCounting;
 	boolean isSounding;
-	private OpenTimerService mService;
+	private CountdownService mCDService;
 
-	public CountdownLayout(Context context, int timerViewId,
-			OpenTimerService serviceBinder)
+	public TimerView(Context context, int timerViewId,
+			CountdownService serviceBinder)
 	{
 		mTextSize = 50;
 		mContext = context;
-		mService = serviceBinder;
+		mCDService = serviceBinder;
 		mTimerViewId = timerViewId;
 
 		mLlTimerLayout = new LinearLayout(mContext);
@@ -79,7 +79,7 @@ public class CountdownLayout
 				 * the service on click.
 				 */
 				Intent startService = new Intent(mContext,
-						OpenTimerService.class);
+						CountdownService.class);
 				mContext.startService(startService);
 
 				if (isCounting)
@@ -100,7 +100,7 @@ public class CountdownLayout
 					// stopAlarm.putExtra("TIMER_ID", mTimerViewId);
 					// mContext.startService(stopAlarm);
 
-					mService.stopAlarm(mTimerViewId);
+					mCDService.stopAlarm(mTimerViewId);
 
 					mTvHours.setTextColor(mContext.getResources().getColor(
 							R.color.white));
@@ -117,9 +117,9 @@ public class CountdownLayout
 				{
 
 					/* Set a new alarm and start counting down! */
-					Integer hours = CountdownFragment.getHours();
-					Integer minutes = CountdownFragment.getMinutes();
-					Integer seconds = CountdownFragment.getSeconds();
+					Integer hours = OpenTimerActivity.getHours();
+					Integer minutes = OpenTimerActivity.getMinutes();
+					Integer seconds = OpenTimerActivity.getSeconds();
 
 					Long millisInFuture = (long) ((seconds * 1000)
 							+ (minutes * 60 * 1000) + (hours * 60 * 60 * 1000));
@@ -142,7 +142,7 @@ public class CountdownLayout
 					mTvMinuteSecondSeparator.setTextColor(mContext
 							.getResources().getColor(R.color.white));
 
-					mService.startTimer(mTimerViewId, millisInFuture);
+					mCDService.startTimer(mTimerViewId, millisInFuture);
 					isCounting = true;
 				}
 
@@ -163,7 +163,7 @@ public class CountdownLayout
 						{
 							/* Reset the UI */
 							resetUI();
-							mService.stopTimer(mTimerViewId);
+							mCDService.stopTimer(mTimerViewId);
 							isCounting = false;
 						}
 						return true;
@@ -230,7 +230,7 @@ public class CountdownLayout
 	}
 
 	/* Used by the UI for object reference */
-	public LinearLayout getLayout()
+	public LinearLayout getTimerLayout()
 	{
 		return mLlTimerLayout;
 	}
