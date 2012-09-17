@@ -174,6 +174,7 @@ public class OpenTimerActivity extends Activity
         editor.putInt("HOURS", hoursPicker.getCurrent());
         editor.putInt("MINUTES", minutesPicker.getCurrent());
         editor.putInt("SECONDS", secondsPicker.getCurrent());
+        editor.commit();
     }
 
     @Override

@@ -51,10 +51,10 @@ public class CountdownService extends Service
 	 * arg1: start immediately (no delay) arg2: vibrate for this long (millis)
 	 * arg3: sleep for this long between vibrations (millis)
 	 */
-	private Vibrator mVibrator;
-	private final long[] mVibratorPattern = new long[] { 0l, 200l, 500l };
+	private Vibrator vibrator;
+	private final long[] vibratorPattern = new long[] { 0l, 200l, 500l };
 
-	private ArrayList<Timer> mTimers;
+	private ArrayList<Timer> timers;
 
 	/*
 	 * Setting up the service to be bindable by an activity. Binding an activity
@@ -65,7 +65,7 @@ public class CountdownService extends Service
 	 */
 	private final IBinder binder = new ServiceBinder();
 
-	private Notification mNotification;
+	private Notification notification;
 
 	@Override
 	public IBinder onBind(Intent intent)
@@ -81,7 +81,7 @@ public class CountdownService extends Service
 		}
 	}
 
-	/* End of bind stuff */
+
 
 	@Override
 	public void onCreate()
@@ -101,27 +101,27 @@ public class CountdownService extends Service
 
 		PendingIntent pendingNotificationIntent = PendingIntent.getActivity(
 				this, 1, notificationIntent, 0);
-		mNotification = new Notification(R.drawable.icon_notification,
+		notification = new Notification(R.drawable.icon_notification,
 				getString(R.string.foreground_message_title),
 				System.currentTimeMillis());
 
-		mNotification.setLatestEventInfo(getApplicationContext(),
-				getString(R.string.foreground_message_title),
-				getString(R.string.foreground_message_body),
-				pendingNotificationIntent);
+		notification.setLatestEventInfo(getApplicationContext(),
+                getString(R.string.foreground_message_title),
+                getString(R.string.foreground_message_body),
+                pendingNotificationIntent);
 
-		mNotification.flags = mNotification.flags
+		notification.flags = notification.flags
 				| Notification.FLAG_ONGOING_EVENT;
 
-		startForeground(NOTIFICATION_ID, mNotification);
+		startForeground(NOTIFICATION_ID, notification);
 
 		/* Sets up resources */
-		mTimers = new ArrayList<Timer>();
-		mTimers.add(new Timer(mTimers.size()));
-		mTimers.add(new Timer(mTimers.size()));
-		mTimers.add(new Timer(mTimers.size()));
+		timers = new ArrayList<Timer>();
+		timers.add(new Timer(timers.size()));
+		timers.add(new Timer(timers.size()));
+		timers.add(new Timer(timers.size()));
 
-		mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+		vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 	}
 
 	@Override
@@ -132,9 +132,9 @@ public class CountdownService extends Service
 
 	public int announceServiceState()
 	{
-		for (int i = 0; i < mTimers.size(); i++)
+		for (int i = 0; i < timers.size(); i++)
 		{
-			if (mTimers.get(i).isSounding)
+			if (timers.get(i).isSounding)
 			{
 				Intent intentA = new Intent();
 				intentA.setAction("ALARM_SOUNDING");
@@ -142,12 +142,12 @@ public class CountdownService extends Service
 				sendBroadcast(intentA);
 			}
 		}
-		return mTimers.size();
+		return timers.size();
 	}
 
 	public void addTimer()
 	{
-		mTimers.add(new Timer(mTimers.size()));
+		timers.add(new Timer(timers.size()));
 		Intent added = new Intent();
 		added.setAction("TIMER_ADDED");
 		sendBroadcast(added);
@@ -155,17 +155,17 @@ public class CountdownService extends Service
 
 	public void removeTimer()
 	{
-		mTimers.get(mTimers.size() - 1).stop();
-		mTimers.remove(mTimers.size() - 1);
+		timers.get(timers.size() - 1).stop();
+		timers.remove(timers.size() - 1);
 		Intent removed = new Intent();
 		removed.setAction("TIMER_REMOVED");
-		removed.putExtra("TIMER_ID", mTimers.size());
+		removed.putExtra("TIMER_ID", timers.size());
 		sendBroadcast(removed);
 	}
 
 	public void stopTimer(int timerId)
 	{
-		mTimers.get(timerId).stop();
+		timers.get(timerId).stop();
 		Intent stopped = new Intent();
 		stopped.setAction("TIMER_STOPPED");
 		stopped.putExtra("TIMER_ID", timerId);
@@ -174,8 +174,8 @@ public class CountdownService extends Service
 
 	public void stopAlarm(int timerId)
 	{
-		mTimers.get(timerId).stopAlarm();
-		mVibrator.cancel();
+		timers.get(timerId).stopAlarm();
+		vibrator.cancel();
 		Intent stopped = new Intent();
 		stopped.setAction("TIMER_ALARM_STOPPED");
 		stopped.putExtra("TIMER_ID", timerId);
@@ -184,14 +184,18 @@ public class CountdownService extends Service
 
 	public void startTimer(int timerId, long millisInFuture)
 	{
-		mTimers.get(timerId).startTimer(millisInFuture);
+		if(timers != null && timers.get(timerId) != null
+                && timerId<timers.size())
+        {
+            timers.get(timerId).startTimer(millisInFuture);
+        }
 	}
 
 	public boolean allAreFinished()
 	{
-		for (int i = 0; i < mTimers.size(); i++)
+		for (int i = 0; i < timers.size(); i++)
 		{
-			if (mTimers.get(i).isCounting || mTimers.get(i).isSounding)
+			if (timers.get(i).isCounting || timers.get(i).isSounding)
 			{
 				return false;
 			}
@@ -462,7 +466,7 @@ public class CountdownService extends Service
 				/* Starts vibrating, repeating until cancel()-ed */
 				try
 				{
-					mVibrator.vibrate(mVibratorPattern, 0);
+					vibrator.vibrate(vibratorPattern, 0);
 				} catch (Exception e)
 				{
 					/* Already vibrating, no biggie */
