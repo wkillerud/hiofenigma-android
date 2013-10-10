@@ -8,4 +8,11 @@
         android:title="@string/stop_all">
     </item>
 
+    <item
+        android:id="@+id/configure"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:showAsAction="withText"
+        android:title="@string/configure">
+    </item>
+
 </menu>

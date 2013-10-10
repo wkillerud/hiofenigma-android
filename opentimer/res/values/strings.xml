@@ -20,5 +20,8 @@
     <string name="foreground_message_title">OpenTimer is running</string>
     <string name="foreground_message_body">To start and stop timers open the app by tapping this notification.</string>
     <string name="clear_history">Clear history</string>
+    <string name="keep_active">Keep active</string>
+    <string name="keep_screen_active">Keep the screen active during countdown</string>
+    <string name="configure">Configure</string>
 
 </resources>

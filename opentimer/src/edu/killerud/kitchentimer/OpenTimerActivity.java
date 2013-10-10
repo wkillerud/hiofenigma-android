@@ -28,12 +28,15 @@ import android.app.Activity;
 import android.content.*;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
@@ -150,7 +153,18 @@ public class OpenTimerActivity extends Activity
 
 		Intent startService = new Intent(this, CountdownService.class);
 		startService(startService);
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Window window = getWindow();
+        if(preferences.getBoolean("pref_key_keep_screen_active", false)){
+            window.setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }else{
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
 	}
+
+
 
 	@Override
 	public void onPause()
@@ -214,6 +228,9 @@ public class OpenTimerActivity extends Activity
 				countdownService.stopTimer(i);
 			}
 			return true;
+        case R.id.configure:
+            startActivity(new Intent(this, ConfigureActivity.class));
+            return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
